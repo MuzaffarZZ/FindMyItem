@@ -25,19 +25,15 @@ const zoneIcons = {
   rumah: '🧹', aiskrim: '🍦', goreng: '🥟'
 };
 
-// Kedudukan emoji: 'left' untuk kotak mendatar, 'top' untuk kotak menegak/kecil
 const iconPos = {
   snek: 'left', mi: 'left', biskut: 'left', gula: 'left',
   minuman: 'left', bahan: 'left', alat: 'left', tisu: 'left', goreng: 'left'
 };
 
-// (Pilihan) Tunjuk emoji juga dalam senarai, carian dan mesej lokasi
 Object.keys(zoneLabels).forEach(k => {
-  if (zoneIcons[k]) zoneLabels[k] = `${zoneIcons[k]} ${zoneLabels[k]}`;
+  if (zoneIcons[k]) zoneLabels[k] = `${zoneIcons[k]}${zoneLabels[k]}`;
 });
 
-// Titik hujung laluan (x, y) berdasarkan viewBox 1000 x 1200.
-// Zon blok tengah didekati dari tepi kanan (x: 820).
 const zoneCoordinates = {
   airSejuk: { x: 135, y: 430 },
   vendor:   { x: 320, y: 430 },
@@ -56,11 +52,8 @@ const zoneCoordinates = {
   goreng:   { x: 780, y: 1030 }
 };
 
-// Lorong menegak yang kosong: x=142 (antara dua rak kiri), x=350 (kiri rak Roti).
-// Semua zon lain guna lorong x=842 (antara blok tengah dan rak kanan).
 const laneX = { airSejuk: 142, vendor: 350, roti1: 350, roti2: 350 };
 
-// Setiap kategori = satu zon pada pelan kedai
 const categories = {
   "Air Minuman (Sejuk)": {
     zones: ['airSejuk'],
@@ -146,22 +139,20 @@ const searchSuggestionsEl = $('searchSuggestions');
 const routePath = $('dynamicRoute');
 
 let highlightItem = null;
+let highlightZone = null;
 
-// Indeks carian rata: semua item merentas semua kategori
 const searchIndex = [];
 Object.entries(categories).forEach(([category, data]) => {
   data.items.forEach(([name, zone]) => searchIndex.push({ name, category, zone }));
 });
 const findItem = name => searchIndex.find(i => i.name === name);
 
-// Zon pada pelan
 const zoneEls = {};
 document.querySelectorAll('.plan .zone').forEach((g, i) => {
   zoneEls[g.dataset.zone] = g;
   g.style.animationDelay = (i * 45) + 'ms';
 });
 
-// Hijau = zon kategori, merah = rak item terpilih
 function renderMap(catZones, focusZone){
   Object.entries(zoneEls).forEach(([id, el]) => {
     el.classList.toggle('item-on', id === focusZone);
@@ -169,7 +160,6 @@ function renderMap(catZones, focusZone){
   });
 }
 
-// Isi dropdown kategori
 Object.keys(categories).forEach(name => {
   const opt = document.createElement('option');
   opt.value = name;
@@ -179,6 +169,7 @@ Object.keys(categories).forEach(name => {
 
 function chooseItem(it, keepText){
   highlightItem = it.name;
+  highlightZone = it.zone;          
   itemSearchInput.value = keepText ? it.name : '';
   closeSuggestions();
   categorySelect.value = it.category;
@@ -189,6 +180,7 @@ function renderPopular(){
   popularGridEl.innerHTML = '';
   popularNames.forEach((name, i) => {
     const it = findItem(name);
+    if (!it) return;
     const card = document.createElement('button');
     card.className = 'popular-card';
     card.style.animationDelay = (i * 60) + 'ms';
@@ -202,7 +194,6 @@ function renderPopular(){
   });
 }
 
-// Laluan ikut lorong kosong: mendatar -> menegak -> mendatar
 function createRoute(sx, sy, ex, ey, lane){
   return `M ${sx} ${sy} H ${lane} V ${ey} H ${ex}`;
 }
@@ -214,8 +205,8 @@ function hideRoute(){
   routePath.ontransitionend = null;
 }
 
-// Lukis laluan dengan animasi; anak panah muncul selepas garisan siap
 function drawRoute(d){
+  if(!routePath) return;
   routePath.setAttribute('d', d);
   routePath.style.display = 'block';
   routePath.removeAttribute('marker-end');
@@ -226,7 +217,7 @@ function drawRoute(d){
   routePath.style.transition = 'none';
   routePath.style.strokeDasharray = len;
   routePath.style.strokeDashoffset = reduce ? 0 : len;
-  routePath.getBoundingClientRect(); // paksa reflow
+  routePath.getBoundingClientRect();
 
   if(reduce){
     routePath.setAttribute('marker-end', 'url(#arrow)');
@@ -238,21 +229,21 @@ function drawRoute(d){
     routePath.setAttribute('marker-end', 'url(#arrow)');
 }
 
-// Kemas kini mesej, pelan, dan laluan panah
 function updateView(){
+  clearStops();
   const value = categorySelect.value;
 
   if(!value){
     resultMsg.innerHTML = 'Pilih kategori atau cari item untuk melihat lokasinya.';
     renderMap([], null);
-    popularSectionEl.style.display = '';
+    if(popularSectionEl) popularSectionEl.style.display = '';
     hideRoute();
     return;
   }
 
-  popularSectionEl.style.display = 'none';
+  if(popularSectionEl) popularSectionEl.style.display = 'none';
   const cat = categories[value];
-  const focus = highlightItem ? findItem(highlightItem).zone : null;
+  const focus = highlightItem ? findItem(highlightItem)?.zone : null;
 
   if(focus){
     resultMsg.innerHTML =
@@ -268,30 +259,28 @@ function updateView(){
     hideRoute();
   }
 
-  renderMap(cat.zones, focus);
+  renderMap(cat ? cat.zones : [], focus);
   itemListEl.querySelectorAll('.item-row').forEach(r => {
     r.classList.toggle('highlight', r.dataset.name === highlightItem);
   });
 }
 
-// Bina senarai item bagi kategori terpilih
 function showCategory(){
   const value = categorySelect.value;
   itemListEl.innerHTML = '';
 
-  if(value){
+  if(value && categories[value]){
     categories[value].items.forEach(([name, zone], i) => {
       const row = document.createElement('div');
       row.className = 'item-row';
       row.dataset.name = name;
       row.style.animationDelay = Math.min(i * 40, 600) + 'ms';
       row.innerHTML = `<span>${esc(name)}</span><span class="rak-tag">${esc(zoneLabels[zone])}</span>`;
+      row.appendChild(makeAddBtn(name, zone));
       row.addEventListener('click', () => {
         highlightItem = (highlightItem === name) ? null : name;
+        highlightZone = highlightItem ? zone : null;
         updateView();
-        if(highlightItem){
-          document.querySelector('.rack-panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }
       });
       itemListEl.appendChild(row);
     });
@@ -299,7 +288,6 @@ function showCategory(){
   updateView();
 }
 
-// ---------- Carian item ----------
 function normalize(s){
   return s.trim().toLowerCase().replace(/\s+/g, ' ');
 }
@@ -312,7 +300,7 @@ function closeSuggestions(){
 function renderSuggestions(matches, query){
   if(matches.length === 0){
     searchSuggestionsEl.innerHTML =
-      `<div class="sug-empty">Tiada item sepadan dengan "<b>${esc(query)}</b>". Cuba kata kunci lain atau pilih kategori di bawah.</div>`;
+      `<div class="sug-empty">Tiada item sepadan dengan "<b>${esc(query)}</b>".</div>`;
     searchSuggestionsEl.classList.add('open');
     return;
   }
@@ -364,39 +352,259 @@ itemSearchInput.addEventListener('blur', closeSuggestions);
 
 categorySelect.addEventListener('change', () => {
   highlightItem = null;
+  highlightZone = null;
   itemSearchInput.value = '';
   closeSuggestions();
   showCategory();
 });
 
+// ---------- Carian Suara Biasa (Browser Web Speech API) ----------
+const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+if (SpeechRec) {
+  const micBtn = document.createElement('button');
+  micBtn.type = 'button';
+  micBtn.id = 'micBtn';
+  micBtn.textContent = '🎙️';
+  micBtn.title = 'Cari guna suara';
+
+  const wrap = document.createElement('div');
+  wrap.className = 'search-wrap';
+  if (itemSearchInput.parentNode) {
+    itemSearchInput.parentNode.insertBefore(wrap, itemSearchInput);
+    wrap.appendChild(itemSearchInput);
+    wrap.appendChild(micBtn);
+  }
+
+  const rec = new SpeechRec();
+  rec.lang = 'ms-MY';
+  rec.interimResults = false;
+  rec.maxAlternatives = 1;
+
+  let listening = false;
+
+  const setListening = on => {
+    listening = on;
+    micBtn.classList.toggle('listening', on);
+    micBtn.textContent = on ? '🔴' : '🎙️';
+  };
+
+  micBtn.addEventListener('click', () => {
+    if (listening) { rec.stop(); return; }
+    try { rec.start(); } catch (e) {}
+  });
+
+  rec.onstart = () => setListening(true);
+  rec.onend = () => setListening(false);
+
+  rec.onresult = e => {
+    const text = e.results[0][0].transcript.replace(/[.,!?]+$/, '').trim();
+    itemSearchInput.value = text;
+    handleItemSearchInput();
+
+    const q = normalize(text);
+    const exact = searchIndex.filter(i => normalize(i.name) === q);
+    if (exact.length === 1) chooseItem(exact[0], true);
+  };
+}
+
+// Senarai Beli-belah + Laluan
+const START = { x: 130, y: 80 };
+const CART_KEY = 'senaraiBeli';
+const laneOf = z => laneX[z] ?? 842;
+
+let cart = [];
+try { cart = JSON.parse(localStorage.getItem(CART_KEY)) || []; } catch (e) { cart = []; }
+cart = cart.filter(c => searchIndex.some(i => i.name === c.name && i.zone === c.zone));
+
+let lastOrder = null;
+
+const saveCart = () => { try { localStorage.setItem(CART_KEY, JSON.stringify(cart)); } catch (e) {} };
+const inCart = (name, zone) => cart.some(c => c.name === name && c.zone === zone);
+
+function legPoints(from, to){
+  const t = zoneCoordinates[to];
+  const lane = laneOf(to);
+  const pts = [];
+  if (from.zone){
+    const cur = laneOf(from.zone);
+    pts.push([cur, from.y]);
+    if (cur !== lane){ pts.push([cur, START.y]); pts.push([lane, START.y]); }
+  } else {
+    pts.push([lane, START.y]);
+  }
+  pts.push([lane, t.y]);
+  pts.push([t.x, t.y]);
+  return pts;
+}
+
+function planRoute(zones){
+  let cur = { zone: null, x: START.x, y: START.y };
+  const left = [...zones], order = [], all = [[START.x, START.y]];
+
+  const cost = (from, to) => {
+    let s = 0, px = from.x, py = from.y;
+    legPoints(from, to).forEach(([x, y]) => { s += Math.abs(x - px) + Math.abs(y - py); px = x; py = y; });
+    return s;
+  };
+
+  while (left.length){
+    let bi = 0, bc = Infinity;
+    left.forEach((z, i) => { const c = cost(cur, z); if (c < bc){ bc = c; bi = i; } });
+    const z = left.splice(bi, 1)[0];
+    all.push(...legPoints(cur, z));
+    order.push(z);
+    cur = { zone: z, ...zoneCoordinates[z] };
+  }
+  const d = all.map((p, i) => `${i ? 'L' : 'M'} ${p[0]} ${p[1]}`).join(' ');
+  return { order, d };
+}
+
+function clearStops(){
+  const g = document.getElementById('routeStops');
+  if (g) g.remove();
+}
+
+function drawStops(order){
+  clearStops();
+  if(!routePath || !routePath.ownerSVGElement) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const g = document.createElementNS(NS, 'g');
+  g.id = 'routeStops';
+  order.forEach((z, i) => {
+    const c = zoneCoordinates[z];
+    const s = document.createElementNS(NS, 'g');
+    s.setAttribute('class', 'route-stop');
+    const circ = document.createElementNS(NS, 'circle');
+    circ.setAttribute('cx', c.x); circ.setAttribute('cy', c.y); circ.setAttribute('r', 17);
+    const txt = document.createElementNS(NS, 'text');
+    txt.setAttribute('x', c.x); txt.setAttribute('y', c.y);
+    txt.setAttribute('text-anchor', 'middle');
+    txt.setAttribute('dominant-baseline', 'central');
+    txt.setAttribute('font-size', 20);
+    txt.textContent = i + 1;
+    s.appendChild(circ); s.appendChild(txt);
+    g.appendChild(s);
+    setTimeout(() => s.classList.add('show'), 250 + (1000 * (i + 1)) / order.length);
+  });
+  routePath.ownerSVGElement.appendChild(g);
+}
+
+function showListRoute(){
+  const zones = [...new Set(cart.map(c => c.zone))];
+  if (!zones.length) return;
+
+  const { order, d } = planRoute(zones);
+  lastOrder = order;
+
+  categorySelect.value = '';
+  highlightItem = null;
+  highlightZone = null;
+  itemListEl.innerHTML = '';
+  if(popularSectionEl) popularSectionEl.style.display = 'none';
+
+  resultMsg.innerHTML =
+    `🛒 <span>Laluan untuk <b>${cart.length} barang</b> melalui <b>${order.length} rak</b>. Ikut nombor <b>1</b> hingga <b>${order.length}</b> pada pelan.</span>`;
+  renderMap(order, null);
+  drawRoute(d);
+  drawStops(order);
+  renderCart();
+  document.querySelector('.plan')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function setAddState(b){
+  const on = inCart(b.dataset.name, b.dataset.zone);
+  b.textContent = on ? '✓' : '+';
+  b.classList.toggle('added', on);
+  b.setAttribute('aria-label', (on ? 'Buang ' : 'Tambah ') + b.dataset.name + (on ? ' dari senarai' : ' ke senarai'));
+}
+
+function refreshAddButtons(){
+  itemListEl.querySelectorAll('.add-btn').forEach(setAddState);
+}
+
+function makeAddBtn(name, zone){
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'add-btn';
+  b.dataset.name = name;
+  b.dataset.zone = zone;
+  setAddState(b);
+  b.addEventListener('click', e => { e.stopPropagation(); toggleCart(name, zone); });
+  return b;
+}
+
+function toggleCart(name, zone){
+  const i = cart.findIndex(c => c.name === name && c.zone === zone);
+  if (i >= 0) cart.splice(i, 1); else cart.push({ name, zone });
+  lastOrder = null;
+  saveCart();
+  refreshAddButtons();
+  renderCart();
+}
+
+// Panel Senarai
+const cartFab = document.createElement('button');
+cartFab.type = 'button';
+cartFab.id = 'cartFab';
+
+const cartPanel = document.createElement('div');
+cartPanel.id = 'cartPanel';
+cartPanel.innerHTML = `
+  <div class="cart-head"><b>🛒 Senarai Beli-belah</b><button type="button" id="cartClose" aria-label="Tutup">✕</button></div>
+  <div id="cartBody"></div>
+  <div class="cart-actions">
+    <button type="button" id="cartRoute">🗺️ Tunjuk laluan</button>
+    <button type="button" id="cartClear">Kosongkan</button>
+  </div>`;
+document.body.appendChild(cartFab);
+document.body.appendChild(cartPanel);
+
+const cartBody = cartPanel.querySelector('#cartBody');
+
+function renderCart(){
+  cartFab.textContent = `🛒 Senarai (${cart.length})`;
+
+  if (!cart.length){
+    cartBody.innerHTML = '<div class="cart-empty">Belum ada barang.<br>Tekan <b>+</b> pada mana-mana item.</div>';
+    return;
+  }
+
+  const zones = lastOrder || [...new Set(cart.map(c => c.zone))];
+  cartBody.innerHTML = zones.map((z, i) => {
+    const items = cart.filter(c => c.zone === z);
+    return `
+      <div class="cart-group">
+        <div class="cart-zone">${lastOrder ? `<span class="step-no">${i + 1}</span>` : ''}${esc(zoneLabels[z])}</div>
+        ${items.map(c => `
+          <div class="cart-item">
+            <span>${esc(c.name)}</span>
+            <button type="button" class="cart-del" data-name="${esc(c.name)}" data-zone="${esc(c.zone)}" aria-label="Buang ${esc(c.name)}">✕</button>
+          </div>`).join('')}
+      </div>`;
+  }).join('');
+}
+
+cartBody.addEventListener('click', e => {
+  const b = e.target.closest('.cart-del');
+  if (b) toggleCart(b.dataset.name, b.dataset.zone);
+});
+cartFab.addEventListener('click', () => cartPanel.classList.toggle('open'));
+cartPanel.querySelector('#cartClose').addEventListener('click', () => cartPanel.classList.remove('open'));
+cartPanel.querySelector('#cartRoute').addEventListener('click', () => {
+  if (!cart.length) return;
+  cartPanel.classList.remove('open');
+  showListRoute();
+});
+cartPanel.querySelector('#cartClear').addEventListener('click', () => {
+  cart = []; lastOrder = null;
+  saveCart(); refreshAddButtons(); renderCart(); clearStops(); hideRoute();
+});
+
+renderCart();
 renderPopular();
 showCategory();
 
-// 1. Tambah bersama `let highlightItem = null;`
-let highlightZone = null;
-
-// 2. Dalam chooseItem(): tambah satu baris
-highlightItem = it.name;
-highlightZone = it.zone;
-
-// 3. Dalam showCategory(), ganti isi row.addEventListener('click', ...) dengan:
-row.addEventListener('click', () => {
-  const same = (highlightItem === name && highlightZone === zone);
-  highlightItem = same ? null : name;
-  highlightZone = same ? null : zone;
-  updateView();
-  if(highlightItem){
-    document.querySelector('.rack-panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }
-});
-
-// 4. Dalam updateView(), ganti baris `const focus = ...` dengan:
-const focus = highlightItem ? highlightZone : null;
-
-// 5. Dalam categorySelect 'change' listener: tambah
-highlightZone = null;
-
-// Lukis emoji pada setiap zon
 function addZoneIcons(){
   const NS = 'http://www.w3.org/2000/svg';
   Object.entries(zoneEls).forEach(([id, g]) => {
