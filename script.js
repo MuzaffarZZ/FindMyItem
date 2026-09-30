@@ -17,6 +17,25 @@ const zoneLabels = {
   goreng:   'Makanan (Goreng)'
 };
 
+// Emoji bagi setiap zon
+const zoneIcons = {
+  airSejuk: '🧊', vendor: '🍱', roti1: '🍞', roti2: '🍞',
+  snek: '🥨', mi: '🍜', biskut: '🍪', gula: '🍬',
+  minuman: '🥤', bahan: '🧂', alat: '✏️', tisu: '🧼',
+  rumah: '🧹', aiskrim: '🍦', goreng: '🥟'
+};
+
+// Kedudukan emoji: 'left' untuk kotak mendatar, 'top' untuk kotak menegak/kecil
+const iconPos = {
+  snek: 'left', mi: 'left', biskut: 'left', gula: 'left',
+  minuman: 'left', bahan: 'left', alat: 'left', tisu: 'left', goreng: 'left'
+};
+
+// (Pilihan) Tunjuk emoji juga dalam senarai, carian dan mesej lokasi
+Object.keys(zoneLabels).forEach(k => {
+  if (zoneIcons[k]) zoneLabels[k] = `${zoneIcons[k]} ${zoneLabels[k]}`;
+});
+
 // Titik hujung laluan (x, y) berdasarkan viewBox 1000 x 1200.
 // Zon blok tengah didekati dari tepi kanan (x: 820).
 const zoneCoordinates = {
@@ -41,49 +60,78 @@ const zoneCoordinates = {
 // Semua zon lain guna lorong x=842 (antara blok tengah dan rak kanan).
 const laneX = { airSejuk: 142, vendor: 350, roti1: 350, roti2: 350 };
 
-// Setiap kategori dan zon item
+// Setiap kategori = satu zon pada pelan kedai
 const categories = {
-  "Makanan & Keperluan Dapur": {
-    zones: ['airSejuk','vendor','roti1','snek','mi','roti2','biskut','gula','minuman','bahan','aiskrim','goreng'],
-    items: [
-      ["Air Mineral","airSejuk"], ["Milo Tin","airSejuk"],
-      ["Nasi Lemak","vendor"], ["Kuih-muih","vendor"],
-      ["Roti Putih","roti1"], ["Roti Gandum","roti2"],
-      ["Keropok","snek"], ["Kerepek Pisang","snek"],
-      ["Mi Segera Kari","mi"], ["Mi Segera Ayam","mi"],
-      ["Biskut Marie","biskut"], ["Biskut Krim","biskut"],
-      ["Gula-gula Getah","gula"], ["Coklat","gula"],
-      ["Kopi O Kampung","minuman"], ["Teh Tarik Sachet","minuman"], ["Susu Pekat","minuman"],
-      ["Beras Wangi","bahan"], ["Minyak Masak","bahan"], ["Sos Tomato","bahan"], ["Gula Pasir","bahan"], ["Tepung Gandum","bahan"],
-      ["Aiskrim Kon","aiskrim"], ["Aiskrim Tub","aiskrim"],
-      ["Karipap","goreng"], ["Pisang Goreng","goreng"]
-    ]
+  "Air Minuman (Sejuk)": {
+    zones: ['airSejuk'],
+    items: [["F&N","airSejuk"], ["Yeo's","airSejuk"], ["Kopiko","airSejuk"], ["Pepsi","airSejuk"],
+            ["Dutch Lady","airSejuk"], ["Nescafe","airSejuk"], ["Milo","airSejuk"]]
   },
-  "Barangan Rumah": {
+  "Makanan Vendor": {
+    zones: ['vendor'],
+    items: [["Roti","vendor"], ["Kek","vendor"], ["Keropok","vendor"]]
+  },
+  "Roti": {
+    zones: ['roti1','roti2'],
+    items: [["Roti Putih","roti1"], ["Roti Gandum","roti2"]]
+  },
+  "Snek Ringan": {
+    zones: ['snek'],
+    items: [["Keropok Seger","snek"], ["Bika","snek"], ["Chickadees","snek"],
+            ["Mr.Potato chips","snek"], ["Roller Coaster","snek"], ["Corntoz","snek"]]
+  },
+  "Mi Segera": {
+    zones: ['mi'],
+    items: [["Maggi","mi"], ["Buldak","mi"], ["PAMA","mi"], ["Mamee","mi"]]
+  },
+  "Biskut": {
+    zones: ['biskut'],
+    items: [["Chips More","biskut"], ["Munchy's","biskut"], ["Muzic","biskut"],
+            ["Oreo","biskut"], ["Julie's / Toast","biskut"], ["Biskut Star","biskut"]]
+  },
+  "Gula-gula": {
+    zones: ['gula'],
+    items: [["M&M","gula"], ["KitKat","gula"], ["Cadbury","gula"],
+            ["Skittles","gula"], ["Mentos","gula"], ["Hershey`s","gula"]]
+  },
+  "Minuman": {
+    zones: ['minuman'],
+    items: [["F&N","minuman"], ["Yeo's","minuman"], ["Kopiko","minuman"], ["Pepsi","minuman"],
+            ["Dutch Lady","minuman"], ["Nescafe","minuman"], ["Milo","minuman"]]
+  },
+  "Bahan Dapur": {
+    zones: ['bahan'],
+    items: [["Kicap Jalen","bahan"], ["Tuna Ayam Brand","bahan"], ["Planta","bahan"],
+            ["Mentega Kacang","bahan"], ["Sos cili kimball","bahan"], ["Axion Cuci Pinggan","bahan"]]
+  },
+  "Alat Tulis": {
+    zones: ['alat'],
+    items: [["Correction tape","alat"], ["Pita pelekat","alat"], ["Alat Tulis","alat"],
+            ["Buku latihan","alat"], ["Kertas Graf","alat"], ["Kertas Kajian","alat"]]
+  },
+  "Tisu & Sabun": {
+    zones: ['tisu'],
+    items: [["Colgate","tisu"], ["Sunsilk","tisu"], ["Kotex","tisu"], ["Shokubutsu","tisu"],
+            ["Downy","tisu"], ["Daia","tisu"], ["Lifebuoy","tisu"]]
+  },
+  "Barang Keperluan Rumah": {
     zones: ['rumah'],
     items: [
       ["Sabun Basuh","rumah"], ["Pencuci Lantai","rumah"], ["Baldi Plastik","rumah"], ["Penyapu","rumah"],
       ["Tuala Dapur","rumah"], ["Berus Lantai","rumah"], ["Pewangi Bilik","rumah"], ["Beg Sampah","rumah"]
     ]
   },
-  "Kelengkapan Diri": {
-    zones: ['tisu'],
-    items: [
-      ["Sabun Mandi","tisu"], ["Syampu","tisu"], ["Berus Gigi","tisu"], ["Pencuci Muka","tisu"],
-      ["Losyen Badan","tisu"], ["Ubat Gigi","tisu"], ["Pewangi Badan","tisu"], ["Pencukur","tisu"],
-      ["Tisu Muka","tisu"], ["Tisu Tandas","tisu"]
-    ]
+  "Aiskrim": {
+    zones: ['aiskrim'],
+    items: [["Aiskrim Kon","aiskrim"], ["Aiskrim Tub","aiskrim"]]
   },
-  "Kelengkapan Sekolah & Sampingan": {
-    zones: ['alat'],
-    items: [
-      ["Buku Tulis","alat"], ["Pen & Pensel","alat"], ["Beg Sekolah","alat"], ["Gunting","alat"],
-      ["Pembaris","alat"], ["Kotak Pensel","alat"], ["Kalkulator","alat"], ["Pemadam","alat"]
-    ]
-  }
+  "Makanan (Goreng)": {
+    zones: ['goreng'],
+    items: [["Karipap","goreng"], ["Pisang Goreng","goreng"]]
+  },
 };
 
-const popularNames = ["Kopi O Kampung", "Minyak Masak", "Sabun Mandi", "Syampu", "Pencuci Lantai", "Beg Sekolah"];
+const popularNames = ["Kopiko", "Kicap Jalen", "Lifebuoy", "Sunsilk", "Pencuci Lantai", "Buku latihan"];
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -323,3 +371,54 @@ categorySelect.addEventListener('change', () => {
 
 renderPopular();
 showCategory();
+
+// 1. Tambah bersama `let highlightItem = null;`
+let highlightZone = null;
+
+// 2. Dalam chooseItem(): tambah satu baris
+highlightItem = it.name;
+highlightZone = it.zone;
+
+// 3. Dalam showCategory(), ganti isi row.addEventListener('click', ...) dengan:
+row.addEventListener('click', () => {
+  const same = (highlightItem === name && highlightZone === zone);
+  highlightItem = same ? null : name;
+  highlightZone = same ? null : zone;
+  updateView();
+  if(highlightItem){
+    document.querySelector('.rack-panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+});
+
+// 4. Dalam updateView(), ganti baris `const focus = ...` dengan:
+const focus = highlightItem ? highlightZone : null;
+
+// 5. Dalam categorySelect 'change' listener: tambah
+highlightZone = null;
+
+// Lukis emoji pada setiap zon
+function addZoneIcons(){
+  const NS = 'http://www.w3.org/2000/svg';
+  Object.entries(zoneEls).forEach(([id, g]) => {
+    const icon = zoneIcons[id];
+    if (!icon) return;
+
+    const shape = g.querySelector('rect') || g;
+    const b = shape.getBBox();
+    const left = iconPos[id] === 'left';
+    const size = left
+      ? Math.min(b.height * 0.6, 32)
+      : Math.min(b.width * 0.55, 34);
+
+    const t = document.createElementNS(NS, 'text');
+    t.textContent = icon;
+    t.setAttribute('class', 'zone-icon');
+    t.setAttribute('font-size', size);
+    t.setAttribute('text-anchor', 'middle');
+    t.setAttribute('dominant-baseline', 'central');
+    t.setAttribute('x', left ? b.x + size * 0.9 : b.x + b.width / 2);
+    t.setAttribute('y', left ? b.y + b.height / 2 : b.y + size * 0.85);
+    g.appendChild(t);
+  });
+}
+addZoneIcons();
